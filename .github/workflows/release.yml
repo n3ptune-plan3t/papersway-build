@@ -24,6 +24,9 @@ jobs:
           pacman -Syu --noconfirm
           # This is a standard Perl build, only needs base-devel
           pacman -S --noconfirm --needed base-devel
+      - name: Install dependencies
+        run: |
+          sudo pacman -Sy --noconfirm perl-anyevent perl-anyevent-i3 perl-json
 
       - name: Set correct permissions
         run: |
