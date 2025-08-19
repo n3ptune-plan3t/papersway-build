@@ -1,0 +1,61 @@
+# .github/workflows/release.yml
+name: Build and Release papersway
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Arch Package
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
+      options: --security-opt seccomp=unconfined
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          pacman -Syu --noconfirm
+          # This is a standard Perl build, only needs base-devel
+          pacman -S --noconfirm --needed base-devel
+
+      - name: Set correct permissions
+        run: |
+          useradd -m builduser
+          chown -R builduser:builduser .
+
+      - name: Build the package
+        run: sudo -u builduser makepkg -sf --noconfirm
+
+      - name: Upload package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: package
+          path: "*.pkg.tar.zst"
+
+  release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download built package from artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: package
+
+      - name: Create Release and Upload Asset
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Release ${{ github.ref_name }}
+          files: "*.pkg.tar.zst"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
